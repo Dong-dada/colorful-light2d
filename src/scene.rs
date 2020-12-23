@@ -21,7 +21,7 @@ impl Scene {
             height,
             sample_count: 64,
             shapes: vec![],
-            max_step: 10
+            max_step: 10,
         }
     }
 
@@ -105,11 +105,7 @@ pub struct Circle {
 
 impl Circle {
     pub fn new(ox: f64, oy: f64, r: f64) -> Circle {
-        Circle {
-            ox,
-            oy,
-            r
-        }
+        Circle { ox, oy, r }
     }
 
     // 计算 (x, y) 点离这个圆的 SDF(也就是到这个圆的边的最近距离)
