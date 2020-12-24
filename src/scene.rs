@@ -67,20 +67,36 @@ impl Scene {
     fn trace(&self, x: f64, y: f64, dx: f64, dy: f64) -> f64 {
         let max_distance = ((self.width.pow(2) + self.width.pow(2)) as f64).sqrt();
 
-        let circle = self.shapes.get(0).unwrap();
-
         let mut distance: f64 = 0.0;
         for _ in 0..self.max_step {
-            let sd = circle.sdf(x + (dx * distance), y + (dy * distance));
-            if sd < EPSILON {
-                return 2.0;
+            let result = self.sdf(x + (dx * distance), y + (dy * distance));
+            if result.sd < EPSILON {
+                return result.emissive;
             }
-            distance += sd;
+            distance += result.sd;
             if distance >= max_distance {
                 break;
             }
         }
         return 0.0;
+    }
+
+    fn sdf(&self, x: f64, y: f64) -> SdfResult {
+        let mut result = SdfResult {
+            sd: f64::MAX,
+            emissive: 0.0
+        };
+        for shape in self.shapes.iter() {
+            result = Scene::union_sd(shape.sdf(x, y), result);
+        }
+
+        return result;
+    }
+
+    // 对两个形状做并集
+    // 此时 sd 的结果应该是两个形状当中 sd 比较小的那个
+    fn union_sd(result_a: SdfResult, result_b: SdfResult) -> SdfResult {
+        return if result_a.sd < result_b.sd { result_a } else { result_b };
     }
 
     fn save_to_file(&self, image: &Vec<u8>, path: &str) {
@@ -97,22 +113,36 @@ impl Scene {
     }
 }
 
+struct SdfResult {
+    // 带符号距离 signed distance
+    sd: f64,
+
+    // 自发光强度
+    emissive: f64,
+}
+
 pub struct Circle {
     ox: f64,
     oy: f64,
     r: f64,
+    emissive: f64,
 }
 
 impl Circle {
-    pub fn new(ox: f64, oy: f64, r: f64) -> Circle {
-        Circle { ox, oy, r }
+    pub fn new(ox: f64, oy: f64, r: f64, emissive: f64) -> Circle {
+        Circle { ox, oy, r, emissive }
     }
 
     // 计算 (x, y) 点离这个圆的 SDF(也就是到这个圆的边的最近距离)
-    fn sdf(&self, x: f64, y: f64) -> f64 {
+    fn sdf(&self, x: f64, y: f64) -> SdfResult {
         let ux = x - self.ox;
         let uy = y - self.oy;
-        return ((ux * ux + uy * uy) as f64).sqrt() - self.r as f64;
+
+        let sd = ((ux * ux + uy * uy) as f64).sqrt() - self.r as f64;
+        return SdfResult {
+            sd,
+            emissive: self.emissive
+        };
     }
 }
 
@@ -122,11 +152,12 @@ mod tests {
 
     #[test]
     fn one_circle() {
-        let width = 512;
-        let height = 384;
-        let mut scene = Scene::new(width, height);
-        let circle = Circle::new(width as f64 / 2.0, height as f64 / 2.0, 64.0);
-        scene.add_shape(circle);
+        let width: f64 = 512.0;
+        let height: f64 = 384.0;
+        let mut scene = Scene::new(width as u32, height as u32);
+        scene.add_shape(Circle::new(width * 0.3, height * 0.3, width * 0.1, 2.0));
+        scene.add_shape(Circle::new(width * 0.3, height * 0.7, width * 0.05, 0.8));
+        scene.add_shape(Circle::new(width * 0.7, height * 0.5, width * 0.10, 0.8));
         scene.render_to_file("./image.png");
     }
 }
