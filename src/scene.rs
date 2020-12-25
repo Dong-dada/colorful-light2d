@@ -1,3 +1,4 @@
+use crate::shape::{SdfResult, Shape};
 use rand::Rng;
 use std::fs;
 use std::fs::File;
@@ -9,7 +10,7 @@ const EPSILON: f64 = 1e-6;
 pub struct Scene {
     width: u32,
     height: u32,
-    shapes: Vec<Circle>,
+    shapes: Vec<Box<dyn Shape>>,
     sample_count: u8,
     max_step: usize,
 }
@@ -25,7 +26,7 @@ impl Scene {
         }
     }
 
-    pub fn add_shape(&mut self, shape: Circle) {
+    pub fn add_shape(&mut self, shape: Box<dyn Shape>) {
         self.shapes.push(shape);
     }
 
@@ -84,7 +85,7 @@ impl Scene {
     fn sdf(&self, x: f64, y: f64) -> SdfResult {
         let mut result = SdfResult {
             sd: f64::MAX,
-            emissive: 0.0
+            emissive: 0.0,
         };
         for shape in self.shapes.iter() {
             result = Scene::union_sd(shape.sdf(x, y), result);
@@ -96,7 +97,11 @@ impl Scene {
     // 对两个形状做并集
     // 此时 sd 的结果应该是两个形状当中 sd 比较小的那个
     fn union_sd(result_a: SdfResult, result_b: SdfResult) -> SdfResult {
-        return if result_a.sd < result_b.sd { result_a } else { result_b };
+        return if result_a.sd < result_b.sd {
+            result_a
+        } else {
+            result_b
+        };
     }
 
     fn save_to_file(&self, image: &Vec<u8>, path: &str) {
@@ -113,51 +118,18 @@ impl Scene {
     }
 }
 
-struct SdfResult {
-    // 带符号距离 signed distance
-    sd: f64,
-
-    // 自发光强度
-    emissive: f64,
-}
-
-pub struct Circle {
-    ox: f64,
-    oy: f64,
-    r: f64,
-    emissive: f64,
-}
-
-impl Circle {
-    pub fn new(ox: f64, oy: f64, r: f64, emissive: f64) -> Circle {
-        Circle { ox, oy, r, emissive }
-    }
-
-    // 计算 (x, y) 点离这个圆的 SDF(也就是到这个圆的边的最近距离)
-    fn sdf(&self, x: f64, y: f64) -> SdfResult {
-        let ux = x - self.ox;
-        let uy = y - self.oy;
-
-        let sd = ((ux * ux + uy * uy) as f64).sqrt() - self.r as f64;
-        return SdfResult {
-            sd,
-            emissive: self.emissive
-        };
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shape::{Circle, Plane};
 
     #[test]
-    fn one_circle() {
+    fn basic() {
         let width: f64 = 512.0;
         let height: f64 = 384.0;
         let mut scene = Scene::new(width as u32, height as u32);
-        scene.add_shape(Circle::new(width * 0.3, height * 0.3, width * 0.1, 2.0));
-        scene.add_shape(Circle::new(width * 0.3, height * 0.7, width * 0.05, 0.8));
-        scene.add_shape(Circle::new(width * 0.7, height * 0.5, width * 0.10, 0.8));
+        scene.add_shape(Box::new(Plane::new(0.0, height * 0.5, 0.0, height * 1.0, 0.8)));
+        scene.add_shape(Box::new(Circle::new(width * 0.7, height * 0.7, width * 0.10, 2.0)));
         scene.render_to_file("./image.png");
     }
 }
