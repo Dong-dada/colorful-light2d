@@ -1,3 +1,4 @@
+
 pub struct SdfResult {
     // 带符号距离 signed distance
     pub sd: f64,
@@ -198,6 +199,8 @@ pub struct Rect {
     sx: f64,
     sy: f64,
     emissive: f64,
+    // 圆角矩形的半径
+    r: f64,
 }
 
 impl Rect {
@@ -209,6 +212,7 @@ impl Rect {
             sx,
             sy,
             emissive,
+            r: 0.0,
         }
     }
 }
@@ -226,5 +230,68 @@ impl Shape for Rect {
             sd,
             emissive: self.emissive,
         };
+    }
+}
+
+pub struct Triangle {
+    ax: f64,
+    ay: f64,
+    bx: f64,
+    by: f64,
+    cx: f64,
+    cy: f64,
+    emissive: f64,
+    // 圆角三角形的半径
+    r: f64,
+}
+
+impl Triangle {
+    pub fn new(ax: f64, ay: f64, bx: f64, by: f64, cx: f64, cy: f64, emissive: f64) -> Triangle {
+        Triangle {
+            ax,
+            ay,
+            bx,
+            by,
+            cx,
+            cy,
+            emissive,
+            r: 0.0,
+        }
+    }
+
+    fn segment_sdf(x: f64, y: f64, ax: f64, ay: f64, bx: f64, by:f64) -> f64 {
+        let vx = x - ax;
+        let vy = y - ay;
+        let ux = bx - ax;
+        let uy = by - ay;
+        let t = ((vx * ux + vy * uy) / (ux * ux + uy * uy))
+            .min(1.0)
+            .max(0.0);
+        let dx = vx - ux * t;
+        let dy = vy - uy * t;
+        return (dx * dx + dy * dy).sqrt();
+    }
+}
+
+impl Shape for Triangle {
+    fn sdf(&self, x: f64, y: f64) -> SdfResult {
+        let result1 = Triangle::segment_sdf(x, y, self.ax, self.ay, self.bx, self.by);
+        let result2 = Triangle::segment_sdf(x, y, self.bx, self.by, self.cx, self.cy);
+        let result3 = Triangle::segment_sdf(x, y, self.cx, self.cy, self.ax, self.ay);
+
+        // 三角形的 sd 是三个线段中距离最近的那个
+        let mut sd = result1.min(result2).min(result3);
+
+        // 如果在三角形内，那么返回 -sd
+        if (self.bx - self.ax) * (y - self.ay) > (self.by - self.ay) * (x - self.ax) &&
+            (self.cx - self.bx) * (y - self.by) > (self.cy - self.by) * (x - self.bx) &&
+            (self.ax - self.cx) * (y - self.cy) > (self.ay - self.cy) * (x - self.cx) {
+            sd = -sd;
+        }
+
+        return SdfResult {
+            sd,
+            emissive: self.emissive
+        }
     }
 }
