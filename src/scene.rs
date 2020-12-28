@@ -121,15 +121,17 @@ impl Scene {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shape::{Circle, Plane};
+    use crate::shape::{Circle, Plane, Shapes, Capsule};
 
     #[test]
     fn basic() {
         let width: f64 = 512.0;
         let height: f64 = 384.0;
         let mut scene = Scene::new(width as u32, height as u32);
-        scene.add_shape(Box::new(Plane::new(0.0, height * 0.5, 0.0, height * 1.0, 0.8)));
-        scene.add_shape(Box::new(Circle::new(width * 0.7, height * 0.7, width * 0.10, 2.0)));
+        scene.add_shape(
+            Box::new(Capsule::new(width * 0.4, height * 0.4, width * 0.6, height * 0.6, width * 0.1, 1.0)),
+            // Box::new(Circle::new(width * 0.6, height * 0.5, width * 0.20, 0.8)),
+        );
         scene.render_to_file("./image.png");
     }
 }
