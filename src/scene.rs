@@ -121,7 +121,7 @@ impl Scene {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shape::{Circle, Plane, Shapes, Capsule};
+    use crate::shape::{Rect};
 
     #[test]
     fn basic() {
@@ -129,8 +129,14 @@ mod tests {
         let height: f64 = 384.0;
         let mut scene = Scene::new(width as u32, height as u32);
         scene.add_shape(
-            Box::new(Capsule::new(width * 0.4, height * 0.4, width * 0.6, height * 0.6, width * 0.1, 1.0)),
-            // Box::new(Circle::new(width * 0.6, height * 0.5, width * 0.20, 0.8)),
+            Box::new(Rect::new(
+                width * 0.5,
+                height * 0.5,
+                TWO_PI / 16.0,
+                width * 0.3,
+                height * 0.1,
+                1.0,
+            ))
         );
         scene.render_to_file("./image.png");
     }

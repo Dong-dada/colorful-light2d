@@ -1,6 +1,3 @@
-use std::panic::resume_unwind;
-use std::cmp::{min, max};
-
 pub struct SdfResult {
     // 带符号距离 signed distance
     pub sd: f64,
@@ -178,7 +175,9 @@ impl Shape for Capsule {
         let vy = y - self.ay;
         let ux = self.bx - self.ax;
         let uy = self.by - self.ay;
-        let t = ((vx * ux + vy * uy) / (ux * ux + uy * uy)).min(1.0).max(0.0);
+        let t = ((vx * ux + vy * uy) / (ux * ux + uy * uy))
+            .min(1.0)
+            .max(0.0);
         let dx = vx - ux * t;
         let dy = vy - uy * t;
         let segment_sd = (dx * dx + dy * dy).sqrt();
@@ -186,7 +185,46 @@ impl Shape for Capsule {
 
         SdfResult {
             sd: capsule_sd,
-            emissive: self.emissive
+            emissive: self.emissive,
         }
+    }
+}
+
+pub struct Rect {
+    // 矩形由中心点(cx, cy), 旋转角(theta), 半长(sx, sy) 组成
+    cx: f64,
+    cy: f64,
+    theta: f64,
+    sx: f64,
+    sy: f64,
+    emissive: f64,
+}
+
+impl Rect {
+    pub fn new(cx: f64, cy: f64, theta: f64, sx: f64, sy: f64, emissive: f64) -> Rect {
+        Rect {
+            cx,
+            cy,
+            theta,
+            sx,
+            sy,
+            emissive,
+        }
+    }
+}
+
+impl Shape for Rect {
+    fn sdf(&self, x: f64, y: f64) -> SdfResult {
+        let sin_theta = self.theta.sin();
+        let cos_theta = self.theta.cos();
+        let dx = ((x - self.cx) * cos_theta + (y - self.cy) * sin_theta).abs() - self.sx;
+        let dy = ((y - self.cy) * cos_theta - (x - self.cx) * sin_theta).abs() - self.sy;
+        let ax = dx.max(0.0);
+        let ay = dy.max(0.0);
+        let sd = dx.max(dy).min(0.0) + (ax * ax + ay * ay).sqrt();
+        return SdfResult {
+            sd,
+            emissive: self.emissive,
+        };
     }
 }
